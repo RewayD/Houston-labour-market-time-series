@@ -1,0 +1,277 @@
+---
+title: "Houston Labour-Market Time Series"
+subtitle: "A corrected quarterly forecasting comparison"
+author: "Reway Du"
+date: "Portfolio edition — August 2026"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+    theme: flatly
+    self_contained: true
+    pandoc_args: ["--resource-path=.."]
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = "center",
+  out.width = "95%"
+)
+
+metadata <- read.csv("results/analysis_metadata.csv", stringsAsFactors = FALSE)
+selection <- read.csv("results/model_selection.csv", stringsAsFactors = FALSE)
+diagnostics <- read.csv("results/residual_diagnostics.csv", stringsAsFactors = FALSE)
+stationarity <- read.csv("results/stationarity_tests.csv", stringsAsFactors = FALSE)
+metrics <- read.csv("results/forecast_metrics.csv", stringsAsFactors = FALSE)
+unemployment_candidates <- read.csv(
+  "results/candidate_models_unemployment.csv",
+  stringsAsFactors = FALSE
+)
+wage_candidates <- read.csv(
+  "results/candidate_models_wage.csv",
+  stringsAsFactors = FALSE
+)
+
+metadata_values <- setNames(metadata$value, metadata$field)
+selection_values <- setNames(selection$selected_value, selection$component)
+
+metric_value <- function(target_name, model_name, metric_name) {
+  metrics$value[
+    metrics$target == target_name &
+      metrics$model == model_name &
+      metrics$metric == metric_name
+  ][1]
+}
+
+fmt_num <- function(x, digits = 2L) {
+  format(round(as.numeric(x), digits), nsmall = digits, big.mark = ",")
+}
+
+unemployment_target <- "Quarterly unemployment rate"
+wage_target <- "Average weekly wage (USD)"
+```
+
+# Executive summary
+
+This project revisits a two-part university time-series assignment using a
+clean, frequency-correct pipeline. It compares separate seasonal ARMA models
+with a two-variable VAR and a seasonal-naive baseline for one-quarter-ahead
+forecasts of Houston-area unemployment and average weekly wages.
+
+The analysis uses `r metadata_values[["aligned_observations"]]` aligned quarters
+from `r metadata_values[["aligned_start"]]` through
+`r metadata_values[["aligned_end"]]`. Models are initially selected using data
+through `r metadata_values[["initial_training_end"]]`; the final
+`r metadata_values[["evaluation_quarters"]]` quarters are evaluated with an
+expanding training window.
+
+The univariate models produced the lowest RMSE for both series. Unemployment
+RMSE was `r fmt_num(metric_value(unemployment_target, "Univariate SARMA", "RMSE"))`
+percentage points, versus
+`r fmt_num(metric_value(unemployment_target, "Seasonal naive", "RMSE"))` for the
+seasonal-naive baseline and
+`r fmt_num(metric_value(unemployment_target, "VAR", "RMSE"))` for the VAR. Wage
+RMSE was $`r fmt_num(metric_value(wage_target, "Univariate SARMA", "RMSE"))`,
+versus $`r fmt_num(metric_value(wage_target, "Seasonal naive", "RMSE"))` and
+$`r fmt_num(metric_value(wage_target, "VAR", "RMSE"))`, respectively.
+
+This is evidence about forecast accuracy under one historical evaluation—not a
+causal conclusion and not proof that wages and unemployment are unrelated.
+
+# Data and frequency alignment
+
+The two public FRED series have different native frequencies and units:
+
+- [`HOUS448URN`](https://fred.stlouisfed.org/series/HOUS448URN) is a monthly,
+  not-seasonally-adjusted unemployment rate in percent.
+- [`ENUC264240010`](https://fred.stlouisfed.org/series/ENUC264240010) is a
+  quarterly, not-seasonally-adjusted average weekly wage in dollars per week.
+
+For every retained quarter, the unemployment rate is the arithmetic mean of
+all three monthly observations. The wage observation is then joined by the same
+quarter date. No vector recycling, row-position matching, or unequal-length
+`cbind` is used.
+
+```{r aligned-series, echo=FALSE, fig.cap="Aligned quarterly unemployment and average weekly wage series."}
+knitr::include_graphics("figures/01_aligned_series.png")
+```
+
+The wage series is not a minimum-wage measure. It covers average weekly wages
+paid by unemployment-insurance-covered employers. The two source titles also
+use different historical Houston MSA names; this analysis does not assume that
+geographic definitions remained perfectly unchanged.
+
+# Transformations and stationarity diagnostics
+
+The modeled annual transformations are
+
+$$
+\Delta_4 u_t = u_t-u_{t-4}, \qquad
+g^{(4)}_t = \log(w_t)-\log(w_{t-4}),
+$$
+
+where four lags correspond to one year of quarterly data. A lag of 12 would be
+three years and is not used as a quarterly seasonal difference.
+
+```{r transformed-series, echo=FALSE, fig.cap="Year-over-year transformations used for modeling."}
+knitr::include_graphics("figures/02_stationary_transformations.png")
+```
+
+```{r stationarity-table, echo=FALSE}
+stationarity_display <- stationarity
+stationarity_display$ADF_p_value <- format.pval(
+  stationarity_display$ADF_p_value,
+  digits = 3,
+  eps = 0.001
+)
+stationarity_display$KPSS_level_p_value <- format.pval(
+  stationarity_display$KPSS_level_p_value,
+  digits = 3,
+  eps = 0.001
+)
+knitr::kable(
+  stationarity_display,
+  col.names = c("Series", "N", "ADF p-value", "KPSS-level p-value"),
+  align = c("l", "r", "r", "r"),
+  caption = "Complementary stationarity diagnostics on the frozen snapshot."
+)
+```
+
+The ADF null is a unit root, while the KPSS-level null is level stationarity.
+For both annual transformations, the ADF test rejects its null and the KPSS test
+does not reject its null at 5%. These tests have limited power and are treated as
+diagnostics, not proof that the data-generating process is fixed forever.
+
+# Model selection
+
+Univariate candidates span non-seasonal orders $p,q\in\{0,1,2,3\}$ and seasonal
+orders $P,Q\in\{0,1\}$ with quarterly period four and at most four total AR/MA
+terms. Selection uses only the initial training sample. A candidate must have a
+12-lag Ljung–Box p-value of at least 0.05, after adjusting for fitted AR/MA
+terms; among passing candidates, the lowest AICc is selected.
+
+```{r selection-table, echo=FALSE}
+knitr::kable(
+  selection,
+  col.names = c("Component", "Selected value"),
+  align = c("l", "l"),
+  caption = "Initial-training model choices."
+)
+```
+
+```{r diagnostic-table, echo=FALSE}
+diagnostic_display <- diagnostics
+diagnostic_display$Ljung_Box_statistic <- round(
+  diagnostic_display$Ljung_Box_statistic,
+  2
+)
+diagnostic_display$Ljung_Box_p_value <- round(
+  diagnostic_display$Ljung_Box_p_value,
+  3
+)
+knitr::kable(
+  diagnostic_display,
+  col.names = c(
+    "Series", "Selected model", "Lag", "Ljung–Box statistic",
+    "p-value", "Conclusion"
+  ),
+  align = c("l", "l", "r", "r", "r", "l"),
+  caption = "Residual-autocorrelation checks on the initial training fits."
+)
+```
+
+A Ljung–Box p-value below 0.05 would indicate remaining residual
+autocorrelation; it would not establish stationarity. The selected models pass
+this initial check, although passing one diagnostic does not guarantee correct
+specification.
+
+# Out-of-sample design
+
+For every quarter from `r metadata_values[["evaluation_start"]]` through
+`r metadata_values[["evaluation_end"]]`, each model is refit using only data
+available before that target quarter. All methods make the same one-step-ahead
+point forecast:
+
+1. the seasonal-naive forecast repeats the same quarter from the previous year;
+2. each SARMA model forecasts its own annual transformation and reconstructs
+   the level from the same quarter one year earlier; and
+3. the VAR jointly forecasts the two annual transformations and reconstructs
+   both levels in the same way.
+
+This avoids comparing a rolling one-step forecast from one model with a fixed-
+origin multi-step forecast from another.
+
+```{r forecast-figure, echo=FALSE, fig.cap="Expanding-window, one-quarter-ahead forecasts."}
+knitr::include_graphics("figures/03_rolling_forecasts.png")
+```
+
+```{r metric-table, echo=FALSE}
+metric_display <- metrics
+metric_display$value <- round(metric_display$value, 3)
+knitr::kable(
+  metric_display,
+  col.names = c("Target", "Model", "Metric", "Value"),
+  align = c("l", "l", "l", "r"),
+  caption = "Point-forecast error over the 29-quarter evaluation."
+)
+```
+
+```{r rmse-figure, echo=FALSE, fig.cap="RMSE comparison using a common evaluation design."}
+knitr::include_graphics("figures/04_rmse_comparison.png")
+```
+
+The univariate models lead on both MAE and RMSE. The VAR does not improve these
+point forecasts, and it is less accurate than the seasonal-naive baseline for
+unemployment. The result is stated directly rather than selecting whichever
+metric or label produces the preferred story.
+
+# Limitations
+
+- The evaluation has only 29 quarters and includes the unusually large 2020
+  labour-market disruption; forecast rankings may differ in a calmer period.
+- A fixed 80/20 chronological split is transparent but does not quantify
+  uncertainty in model-ranking differences.
+- ADF, KPSS, AICc, and Ljung–Box checks each answer narrow questions and cannot
+  prove model truth.
+- The selected wage model's initial Ljung–Box p-value is only about 0.052, very
+  close to the 0.05 screen; its residual adequacy should therefore be described
+  as borderline rather than conclusive.
+- FRED/BLS observations can be revised after the frozen download.
+- The series are not seasonally adjusted and may reflect changing metropolitan
+  definitions and reporting practices.
+- The VAR is a forecasting benchmark. No structural identification, exogenous
+  controls, Granger-causality study, or causal interpretation is attempted.
+- Only point forecasts are scored; production use would also require calibrated
+  forecast intervals and monitoring for structural breaks.
+
+# Conclusion
+
+Correct frequency alignment changes the project from an invalid monthly/
+quarterly comparison into a reproducible forecasting exercise. On this frozen
+sample and evaluation window, separate seasonal ARMA models forecast both
+targets more accurately than the fitted VAR and seasonal-naive alternatives.
+The most defensible conclusion is therefore modest: a joint linear dynamic model
+did not add point-forecast value here.
+
+# Portfolio and authorship note
+
+The earlier two-part submission was completed collaboratively by Reway Du and
+three peers. It contains no task-level contribution table, so this rewrite does
+not assign sole original authorship to Reway. Student numbers, assignment
+prompts, teammate names, and the original AI-percentage table are omitted.
+
+OpenAI Codex assisted with the post-course statistical refactor, implementation,
+documentation, and testing. Reway remains responsible for rerunning the code,
+checking the results, understanding each assumption, and obtaining any required
+permission before publication.
+
+# Computing environment
+
+```{r session-info}
+cat(readLines("results/session-info.txt"), sep = "\n")
+```

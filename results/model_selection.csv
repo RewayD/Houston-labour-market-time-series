@@ -1,0 +1,6 @@
+"component","selected_value"
+"Unemployment univariate SARMA model","SARMA(2,0)(0,1)[4]"
+"Wage univariate SARMA model","SARMA(3,1)(0,0)[4]"
+"Univariate selection rule","Lowest training AICc among candidates passing a 12-lag Ljung-Box check at 5%"
+"VAR lag","3"
+"Maximum VAR companion root modulus","0.8670"

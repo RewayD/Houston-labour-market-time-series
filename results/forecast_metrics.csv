@@ -1,0 +1,13 @@
+"target","model","metric","value"
+"Average weekly wage (USD)","Univariate SARMA","MAE",29.8051233285851
+"Average weekly wage (USD)","VAR","MAE",37.2992199717279
+"Average weekly wage (USD)","Seasonal naive","MAE",51.2068965517241
+"Average weekly wage (USD)","Univariate SARMA","RMSE",39.3154522571116
+"Average weekly wage (USD)","VAR","RMSE",57.4246979738587
+"Average weekly wage (USD)","Seasonal naive","RMSE",61.3595958265698
+"Quarterly unemployment rate","Univariate SARMA","MAE",0.904993296470579
+"Quarterly unemployment rate","VAR","MAE",1.40365637987792
+"Quarterly unemployment rate","Seasonal naive","MAE",1.6816091954023
+"Quarterly unemployment rate","Univariate SARMA","RMSE",2.29323437567205
+"Quarterly unemployment rate","Seasonal naive","RMSE",2.73366272195284
+"Quarterly unemployment rate","VAR","RMSE",2.90971105257278

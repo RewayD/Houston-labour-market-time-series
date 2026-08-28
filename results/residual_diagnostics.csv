@@ -1,0 +1,3 @@
+"series","selected_model","residual_test_lag","Ljung_Box_statistic","Ljung_Box_p_value","residual_conclusion"
+"Year-over-year change in unemployment","SARMA(2,0)(0,1)[4]",12,6.68632077359275,0.669740522017112,"No residual autocorrelation detected at 5%"
+"Year-over-year log wage growth","SARMA(3,1)(0,0)[4]",12,15.4032186711395,0.0517633277971478,"No residual autocorrelation detected at 5%"

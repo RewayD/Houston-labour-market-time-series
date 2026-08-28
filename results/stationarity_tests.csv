@@ -1,0 +1,5 @@
+"series","observations","ADF_p_value","KPSS_level_p_value"
+"Unemployment rate (level)",141,0.0285072570732286,0.1
+"Log weekly wage (level)",141,0.623762321176959,0.01
+"Year-over-year change in unemployment",137,0.01,0.1
+"Year-over-year log wage growth",137,0.01,0.1
