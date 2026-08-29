@@ -104,12 +104,8 @@ Main report: [`report/analysis.html`](report/analysis.html).
 The earlier two-part submission was a collaborative MAT 3379 course project by
 Reway Du and three peers. The archived files do not contain a task-level
 contribution table, so this repository does not claim that Reway solely authored
-any specific original section. This portfolio edition is a post-course rewrite
+any specific original section. This portfolio edition is a post course rewrite
 that preserves the topic while replacing the flawed analysis and omitting
 student numbers, assignment prompts, and teammate names.
 
-OpenAI Codex assisted with the post-course statistical refactor, code,
-documentation, and testing. Reway should run the project personally and be able
-to explain every transformation, diagnostic, model, and limitation before
-linking it on a résumé. Confirm any teammate or instructor permission required
-before making the repository public.
+
