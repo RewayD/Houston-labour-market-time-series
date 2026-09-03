@@ -47,7 +47,8 @@ should not be presented as a final production model.
 - Added a seasonal-naive baseline, fixed data cutoff, reproducible outputs,
   limitations, and a detailed change log.
 
-See [`CHANGES.md`](CHANGES.md) for the complete list.
+See [`CHANGES.md`](CHANGES.md) for the complete list that was corrected from
+the course project.
 
 ## Data
 
@@ -104,7 +105,7 @@ Main report: [`report/analysis.html`](report/analysis.html).
 The earlier two-part submission was a collaborative MAT 3379 course project by
 Reway Du and three peers. The archived files do not contain a task-level
 contribution table, so this repository does not claim that Reway solely authored
-any specific original section. This portfolio edition is a post course rewrite
+any specific original section. This portfolio edition is a post-course rewrite
 that preserves the topic while replacing the flawed analysis and omitting
 student numbers, assignment prompts, and teammate names.
 

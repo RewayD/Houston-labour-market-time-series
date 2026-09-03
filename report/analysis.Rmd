@@ -22,18 +22,58 @@ knitr::opts_chunk$set(
   fig.align = "center",
   out.width = "95%"
 )
+project_root <- if (file.exists("run.R")) {
+  normalizePath(
+    ".",
+    winslash = "/",
+    mustWork = TRUE
+  )
+} else if (file.exists(file.path("..", "run.R"))) {
+  normalizePath(
+    "..",
+    winslash = "/",
+    mustWork = TRUE
+  )
+} else {
+  stop("Cannot locate the repository root containing run.R.")
+}
 
-metadata <- read.csv("results/analysis_metadata.csv", stringsAsFactors = FALSE)
-selection <- read.csv("results/model_selection.csv", stringsAsFactors = FALSE)
-diagnostics <- read.csv("results/residual_diagnostics.csv", stringsAsFactors = FALSE)
-stationarity <- read.csv("results/stationarity_tests.csv", stringsAsFactors = FALSE)
-metrics <- read.csv("results/forecast_metrics.csv", stringsAsFactors = FALSE)
-unemployment_candidates <- read.csv(
-  "results/candidate_models_unemployment.csv",
+project_file <- function(...) {
+  file.path(project_root, ...)
+}
+
+metadata <- read.csv(
+  project_file("results", "analysis_metadata.csv"),
   stringsAsFactors = FALSE
 )
+
+selection <- read.csv(
+  project_file("results", "model_selection.csv"),
+  stringsAsFactors = FALSE
+)
+
+diagnostics <- read.csv(
+  project_file("results", "residual_diagnostics.csv"),
+  stringsAsFactors = FALSE
+)
+
+stationarity <- read.csv(
+  project_file("results", "stationarity_tests.csv"),
+  stringsAsFactors = FALSE
+)
+
+metrics <- read.csv(
+  project_file("results", "forecast_metrics.csv"),
+  stringsAsFactors = FALSE
+)
+
+unemployment_candidates <- read.csv(
+  project_file("results", "candidate_models_unemployment.csv"),
+  stringsAsFactors = FALSE
+)
+
 wage_candidates <- read.csv(
-  "results/candidate_models_wage.csv",
+  project_file("results", "candidate_models_wage.csv"),
   stringsAsFactors = FALSE
 )
 
@@ -98,7 +138,10 @@ quarter date. No vector recycling, row-position matching, or unequal-length
 `cbind` is used.
 
 ```{r aligned-series, echo=FALSE, fig.cap="Aligned quarterly unemployment and average weekly wage series."}
-knitr::include_graphics("figures/01_aligned_series.png")
+knitr::include_graphics(
+  project_file("figures", "01_aligned_series.png"),
+  rel_path = FALSE
+)
 ```
 
 The wage series is not a minimum-wage measure. It covers average weekly wages
@@ -119,7 +162,10 @@ where four lags correspond to one year of quarterly data. A lag of 12 would be
 three years and is not used as a quarterly seasonal difference.
 
 ```{r transformed-series, echo=FALSE, fig.cap="Year-over-year transformations used for modeling."}
-knitr::include_graphics("figures/02_stationary_transformations.png")
+knitr::include_graphics(
+  project_file("figures", "02_stationary_transformations.png"),
+  rel_path = FALSE
+)
 ```
 
 ```{r stationarity-table, echo=FALSE}
@@ -207,7 +253,10 @@ This avoids comparing a rolling one-step forecast from one model with a fixed-
 origin multi-step forecast from another.
 
 ```{r forecast-figure, echo=FALSE, fig.cap="Expanding-window, one-quarter-ahead forecasts."}
-knitr::include_graphics("figures/03_rolling_forecasts.png")
+knitr::include_graphics(
+  project_file("figures", "03_rolling_forecasts.png"),
+  rel_path = FALSE
+)
 ```
 
 ```{r metric-table, echo=FALSE}
@@ -222,7 +271,10 @@ knitr::kable(
 ```
 
 ```{r rmse-figure, echo=FALSE, fig.cap="RMSE comparison using a common evaluation design."}
-knitr::include_graphics("figures/04_rmse_comparison.png")
+knitr::include_graphics(
+  project_file("figures", "04_rmse_comparison.png"),
+  rel_path = FALSE
+)
 ```
 
 The univariate models lead on both MAE and RMSE. The VAR does not improve these
@@ -265,13 +317,14 @@ three peers. It contains no task-level contribution table, so this rewrite does
 not assign sole original authorship to Reway. Student numbers, assignment
 prompts, teammate names, and the original AI-percentage table are omitted.
 
-OpenAI Codex assisted with the post-course statistical refactor, implementation,
-documentation, and testing. Reway remains responsible for rerunning the code,
-checking the results, understanding each assumption, and obtaining any required
-permission before publication.
 
 # Computing environment
 
 ```{r session-info}
-cat(readLines("results/session-info.txt"), sep = "\n")
+cat(
+  readLines(
+    project_file("results", "session-info.txt")
+  ),
+  sep = "\n"
+)
 ```
